@@ -1,64 +1,77 @@
 # xenforo-html-client
 
-JavaScript-клиент для работы с форумами на движке XenForo через парсинг HTML. Библиотека предоставляет инструменты для обхода антибот-защиты, получения данных о темах, постах, участниках и категориях.
+> JavaScript HTML client for XenForo forums — anti-bot bypass, thread/post/member parsing, proxy support.
+
+[![npm](https://img.shields.io/badge/install-npm-blue?style=flat-square)](https://github.com/jalisco2213/xenforo-html-client)
+[![license](https://img.shields.io/badge/license-MIT-green?style=flat-square)](#)
 
 ---
 
-## Установка
+## Table of Contents
+
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Anti-Bot Bypass](#anti-bot-bypass)
+- [Using the Cookie](#using-the-cookie)
+- [Data Models](#data-models)
+- [Error Handling](#error-handling)
+- [Environment Variables](#environment-variables)
+- [Exported API](#exported-api)
+
+---
+
+## Installation
 
 ```bash
 npm install github:jalisco2213/xenforo-html-client
 ```
 
-### Зависимости
+**Dependencies**
 
-| Пакет | Назначение |
+| Package | Purpose |
 |---|---|
-| `axios` | HTTP-запросы |
-| `cheerio` | Парсинг HTML |
-| `https-proxy-agent` | Поддержка HTTPS-прокси |
-| `socks-proxy-agent` | Поддержка SOCKS-прокси |
-| `vm2` | Безопасное выполнение JS в sandbox |
+| `axios` | HTTP requests |
+| `cheerio` | HTML parsing |
+| `https-proxy-agent` | HTTPS proxy support |
+| `socks-proxy-agent` | SOCKS proxy support |
+| `vm2` | Secure JS execution in sandbox |
 
 ---
 
-## Быстрый старт
+## Quick Start
 
 ```js
 const xenforo = require('xenforo-html-client');
 
-// Настройка базового URL форума
 xenforo.configure({ baseUrl: 'https://forum.example.com' });
 
-// Обход антибот-защиты
 const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ...';
 const antibot = await xenforo.bypassAntibot(userAgent);
 
-console.log(antibot.cookie);     // Значение cookie для дальнейших запросов
-console.log(antibot.userAgent);  // User-Agent, использованный при обходе
+console.log(antibot.cookie);     // Cookie for subsequent requests
+console.log(antibot.userAgent);  // User-Agent used during bypass
 ```
 
 ---
 
-## Конфигурация
+## Configuration
 
 ### `configure(options)`
 
-Устанавливает глобальные настройки библиотеки.
+Sets global library options.
 
-**Параметры:**
-
-| Параметр | Тип | Описание |
+| Parameter | Type | Description |
 |---|---|---|
-| `options.baseUrl` | `string` | Базовый URL форума (например, `https://forum.example.com`) |
+| `options.baseUrl` | `string` | Base URL of the forum (e.g. `https://forum.example.com`) |
 
-**Возвращает:** объект `{ baseUrl: string }`
+**Returns:** `{ baseUrl: string }`
 
 ```js
 xenforo.configure({ baseUrl: 'https://forum.example.com' });
 ```
 
-Базовый URL также можно задать через переменную окружения:
+The base URL can also be set via environment variable:
 
 ```bash
 XENFORO_BASE_URL=https://forum.example.com
@@ -68,13 +81,13 @@ XENFORO_BASE_URL=https://forum.example.com
 
 ### `getBaseUrl(value?)`
 
-Возвращает текущий базовый URL. Приоритет источников:
+Returns the current base URL. Priority order:
 
-1. Значение, переданное напрямую в аргументе `value`
-2. Значение, установленное через `configure()`
-3. Переменная окружения `XENFORO_BASE_URL`
+1. Value passed as argument
+2. Value set via `configure()`
+3. `XENFORO_BASE_URL` environment variable
 
-Если ни один источник не задан — выбрасывает ошибку.
+Throws an `Error` if none of the sources are set.
 
 ```js
 const url = xenforo.getBaseUrl(); // 'https://forum.example.com'
@@ -84,7 +97,7 @@ const url = xenforo.getBaseUrl(); // 'https://forum.example.com'
 
 ### `normalizeBaseUrl(value)`
 
-Приводит URL к стандартному виду: убирает пробелы и завершающие слеши.
+Trims whitespace and trailing slashes from a URL.
 
 ```js
 xenforo.normalizeBaseUrl('https://forum.example.com///');
@@ -93,55 +106,51 @@ xenforo.normalizeBaseUrl('https://forum.example.com///');
 
 ---
 
-## Обход антибот-защиты
+## Anti-Bot Bypass
 
 ### `bypassAntibot(userAgent, proxy?, baseUrl?)`
 
-Выполняет обход антибот-системы форума (R3ACTLAB-ARZ1). Загружает страницу форума, извлекает зашифрованные коды из HTML и расшифровывает их с помощью алгоритма AES, после чего формирует корректное значение cookie.
+Bypasses the forum anti-bot system (`R3ACTLAB-ARZ1`). Fetches the forum page, extracts encrypted codes from the HTML, decrypts them using AES, and produces a valid cookie.
 
-**Параметры:**
+**Parameters**
 
-| Параметр | Тип | По умолчанию | Описание |
+| Parameter | Type | Default | Description |
 |---|---|---|---|
-| `userAgent` | `string` | — | User-Agent для HTTP-запроса |
-| `proxy` | `string` | `null` | URL прокси-сервера (опционально) |
-| `baseUrl` | `string` | `null` | Переопределение базового URL (опционально) |
+| `userAgent` | `string` | — | User-Agent for the HTTP request |
+| `proxy` | `string` | `null` | Proxy server URL (optional) |
+| `baseUrl` | `string` | `null` | Override base URL (optional) |
 
-**Поддерживаемые форматы прокси:**
-- `http://host:port` — HTTP/HTTPS-прокси
-- `socks5://host:port` — SOCKS5-прокси
-- `socks4://host:port` — SOCKS4-прокси
+**Supported proxy formats**
 
-**Возвращает:** `Promise<{ cookie: string, userAgent: string }>`
-
-| Поле | Описание |
+| Format | Type |
 |---|---|
-| `cookie` | Строка вида `R3ACTLAB-ARZ1=<value>; expires=...`, готовая к подстановке в заголовок `Cookie` |
-| `userAgent` | User-Agent, использованный при запросе |
+| `http://host:port` | HTTP / HTTPS proxy |
+| `socks5://host:port` | SOCKS5 proxy |
+| `socks4://host:port` | SOCKS4 proxy |
 
-**Пример без прокси:**
+**Returns:** `Promise<{ cookie: string, userAgent: string }>`
+
+| Field | Description |
+|---|---|
+| `cookie` | Ready-to-use string: `R3ACTLAB-ARZ1=<value>; expires=...` |
+| `userAgent` | User-Agent used during the request |
+
+**Examples**
 
 ```js
+// No proxy
 const antibot = await xenforo.bypassAntibot(
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
 );
-
-console.log(antibot.cookie);
 // R3ACTLAB-ARZ1=abc123...; expires=Thu, 31-Dec-37 23:55:55 GMT; path=/
-```
 
-**Пример с SOCKS5-прокси:**
-
-```js
+// SOCKS5 proxy
 const antibot = await xenforo.bypassAntibot(
   'Mozilla/5.0 ...',
   'socks5://127.0.0.1:9050'
 );
-```
 
-**Пример с HTTP-прокси и явным baseUrl:**
-
-```js
+// HTTP proxy with explicit baseUrl
 const antibot = await xenforo.bypassAntibot(
   'Mozilla/5.0 ...',
   'http://proxy.example.com:8080',
@@ -149,22 +158,22 @@ const antibot = await xenforo.bypassAntibot(
 );
 ```
 
-**Выбрасывает:** `Error` с сообщением `Error bypassing antibot: <причина>`, если обход не удался.
+> Throws `Error: Error bypassing antibot: <reason>` if bypass fails.
 
 ---
 
-## Использование полученного cookie
+## Using the Cookie
 
-После вызова `bypassAntibot` полученное значение cookie нужно объединить с остальными сессионными cookie форума и передавать в заголовке `Cookie` при каждом последующем запросе:
+Combine the antibot cookie with forum session cookies and pass them in the `Cookie` header with every request.
 
 ```js
 const antibot = await xenforo.bypassAntibot(userAgent);
-const antibotValue = antibot.cookie.split(';')[0]; // Только значение, без expires/path
+const antibotValue = antibot.cookie.split(';')[0]; // value only
 
 const cookie = antibotValue
-  + '; xf_csrf=<ваш_csrf_токен>'
-  + '; xf_session=<ваш_session_токен>'
-  + '; xf_user=<ваш_user_токен>';
+  + '; xf_csrf=<your_csrf_token>'
+  + '; xf_session=<your_session_token>'
+  + '; xf_user=<your_user_token>';
 
 const response = await axios.get('https://forum.example.com/forums/1/', {
   headers: {
@@ -176,18 +185,16 @@ const response = await axios.get('https://forum.example.com/forums/1/', {
 
 ---
 
-## Модели данных
+## Data Models
 
-Библиотека экспортирует классы-модели для удобного представления объектов форума.
-
-### `Thread` — тема форума
+### `Thread`
 
 ```js
 const { Thread } = require('xenforo-html-client');
 
 const thread = new Thread({
   threadId: 123,
-  title: 'Заголовок темы',
+  title: 'Thread Title',
   author: 'username',
   date: '2024-01-15T10:00:00Z',
   categoryId: 5,
@@ -197,22 +204,20 @@ const thread = new Thread({
 });
 ```
 
-**Свойства объекта:**
-
-| Свойство | Тип | Описание |
+| Property | Type | Description |
 |---|---|---|
-| `id` | `number` | ID темы |
-| `title` | `string` | Заголовок темы |
-| `author` | `string` | Автор темы |
-| `date` | `Date` | Дата создания (объект `Date`) |
-| `category` | `number` | ID категории |
-| `posts` | `Array` | Массив постов (по умолчанию `[]`) |
-| `replyCount` | `number` | Количество ответов |
-| `isLocked` | `boolean` | Заблокирована ли тема |
+| `id` | `number` | Thread ID |
+| `title` | `string` | Thread title |
+| `author` | `string` | Thread author |
+| `date` | `Date` | Creation date |
+| `category` | `number` | Category ID |
+| `posts` | `Array` | Posts array (default `[]`) |
+| `replyCount` | `number` | Number of replies |
+| `isLocked` | `boolean` | Whether the thread is locked |
 
 ---
 
-### `Post` — пост в теме
+### `Post`
 
 ```js
 const { Post } = require('xenforo-html-client');
@@ -220,27 +225,25 @@ const { Post } = require('xenforo-html-client');
 const post = new Post({
   postId: 456,
   creator: 'username',
-  htmlContent: '<p>Текст поста</p>',
+  htmlContent: '<p>Post content</p>',
   createDate: '2024-01-15T11:00:00Z',
   thread: 123,
-  textContent: 'Текст поста'
+  textContent: 'Post content'
 });
 ```
 
-**Свойства объекта:**
-
-| Свойство | Тип | Описание |
+| Property | Type | Description |
 |---|---|---|
-| `id` | `number` | ID поста |
-| `author` | `string` | Автор поста |
-| `content` | `string` | HTML-содержимое поста |
-| `date` | `string` | Дата создания |
-| `thread` | `number` | ID темы, к которой относится пост |
-| `textContent` | `string` | Текстовое содержимое (без HTML) |
+| `id` | `number` | Post ID |
+| `author` | `string` | Post author |
+| `content` | `string` | HTML content |
+| `date` | `string` | Creation date |
+| `thread` | `number` | Parent thread ID |
+| `textContent` | `string` | Plain text content (no HTML) |
 
 ---
 
-### `Member` — участник форума
+### `Member`
 
 ```js
 const { Member } = require('xenforo-html-client');
@@ -248,8 +251,8 @@ const { Member } = require('xenforo-html-client');
 const member = new Member({
   userId: 789,
   username: 'john_doe',
-  role: 'Модератор',
-  roles: ['Модератор', 'VIP'],
+  role: 'Moderator',
+  roles: ['Moderator', 'VIP'],
   messageCount: 1500,
   reactionScore: 320,
   trophyPoints: 75,
@@ -257,64 +260,60 @@ const member = new Member({
 });
 ```
 
-**Свойства объекта:**
-
-| Свойство | Тип | Описание |
+| Property | Type | Description |
 |---|---|---|
-| `id` | `number` | ID пользователя |
-| `username` | `string` | Никнейм |
-| `role` | `string` | Основная роль |
-| `roles` | `Array` | Все роли пользователя |
-| `messageCount` | `number` | Количество сообщений |
-| `reactionScore` | `number` | Счёт реакций |
-| `trophyPoints` | `number` | Очки трофеев |
-| `lastActivity` | `string` | Время последней активности |
+| `id` | `number` | User ID |
+| `username` | `string` | Username |
+| `role` | `string` | Primary role |
+| `roles` | `Array` | All user roles |
+| `messageCount` | `number` | Total message count |
+| `reactionScore` | `number` | Reaction score |
+| `trophyPoints` | `number` | Trophy points |
+| `lastActivity` | `string` | Last activity timestamp |
 
 ---
 
-### `Category` — категория форума
+### `Category`
 
 ```js
 const { Category } = require('xenforo-html-client');
 
 const category = new Category({
   categoryId: 1,
-  title: 'Общий раздел',
-  description: 'Обсуждение общих тем'
+  title: 'General',
+  description: 'General discussion'
 });
 ```
 
-**Свойства объекта:**
-
-| Свойство | Тип | Описание |
+| Property | Type | Description |
 |---|---|---|
-| `id` | `number` | ID категории |
-| `title` | `string` | Название категории |
-| `description` | `string` | Описание категории |
+| `id` | `number` | Category ID |
+| `title` | `string` | Category title |
+| `description` | `string` | Category description |
 
 ---
 
-## Обработка ошибок
+## Error Handling
 
 ### `IncorrectLoginData`
 
-Выбрасывается при неверных данных авторизации.
+Thrown when invalid login credentials are provided.
 
 ```js
 const { IncorrectLoginData } = require('xenforo-html-client');
 
 try {
-  // ... операция с авторизацией
+  // ... authentication operation
 } catch (err) {
   if (err instanceof IncorrectLoginData) {
-    console.error('Неверный логин или пароль');
+    console.error('Invalid username or password');
   }
 }
 ```
 
 ### `ThisIsYouError`
 
-Выбрасывается при попытке выполнить действие над собственным профилем (например, подписаться на себя).
+Thrown when attempting to perform an action on your own profile (e.g. following yourself).
 
 ```js
 const { ThisIsYouError } = require('xenforo-html-client');
@@ -323,90 +322,47 @@ try {
   // ...
 } catch (err) {
   if (err instanceof ThisIsYouError) {
-    console.error('Нельзя выполнить это действие над собственным профилем');
+    console.error('Cannot perform this action on your own profile');
   }
 }
 ```
 
 ---
 
-## Тестовый файл
+## Environment Variables
 
-Чтобы быстро проверить работу библиотеки, создайте файл `test.cjs` и вставьте в него код ниже. Замените значения cookie своими — их можно скопировать из браузера (DevTools → Application → Cookies).
-
-```js
-require('dotenv').config();
-const xenforo = require('xenforo-html-client');
-
-xenforo.configure({ baseUrl: process.env.XENFORO_BASE_URL });
-
-const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36 OPR/86.0.4363.64';
-
-async function main() {
-    const antibot = await xenforo.bypassAntibot(userAgent);
-    const antibotValue = antibot.cookie.split(';')[0];
-
-    const cookie = antibotValue
-        + '; xf_csrf=<ваш_xf_csrf>'
-        + '; xf_session=<ваш_xf_session>'
-        + '; xf_tfa_trust=<ваш_xf_tfa_trust>'
-        + '; xf_user=<ваш_xf_user>';
-
-    console.log('Всё готово!');
-    console.log('Cookie:', cookie);
-}
-
-main().catch(console.error);
-```
-
-**Запуск:**
-
-```bash
-node test.cjs
-```
-
-**Ожидаемый вывод:**
-
-```
-Всё готово!
-Cookie: R3ACTLAB-ARZ1=abc123...; xf_csrf=... ; xf_session=...
-```
-
----
-
-## Переменные окружения
-
-| Переменная | Описание |
+| Variable | Description |
 |---|---|
-| `XENFORO_BASE_URL` | Базовый URL форума. Используется как fallback, если `configure()` не вызывался |
+| `XENFORO_BASE_URL` | Base forum URL. Used as fallback if `configure()` was not called. |
 
-Рекомендуется использовать файл `.env` совместно с пакетом `dotenv`:
+Using with `dotenv`:
 
 ```bash
+# .env
 XENFORO_BASE_URL=https://forum.example.com
 ```
 
 ```js
 require('dotenv').config();
 const xenforo = require('xenforo-html-client');
-// baseUrl подхватится автоматически из переменной окружения
+// baseUrl is picked up automatically
 ```
 
 ---
 
-## Экспортируемое API
+## Exported API
 
 ```js
 const {
-  configure,          // Функция настройки
-  getBaseUrl,         // Получение базового URL
-  normalizeBaseUrl,   // Нормализация URL
-  bypassAntibot,      // Обход антибот-защиты
-  IncorrectLoginData, // Класс ошибки: неверные данные входа
-  ThisIsYouError,     // Класс ошибки: действие над собственным профилем
-  Category,           // Модель категории
-  Member,             // Модель участника
-  Thread,             // Модель темы
-  Post                // Модель поста
+  configure,          // Set global config
+  getBaseUrl,         // Get current base URL
+  normalizeBaseUrl,   // Normalize a URL string
+  bypassAntibot,      // Bypass anti-bot protection
+  IncorrectLoginData, // Error: invalid login credentials
+  ThisIsYouError,     // Error: action on own profile
+  Category,           // Category model
+  Member,             // Member model
+  Thread,             // Thread model
+  Post,               // Post model
 } = require('xenforo-html-client');
 ```
